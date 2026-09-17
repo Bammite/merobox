@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Déménagement — merobox</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+/* =========================================================
+   1. VARIABLES & RESET
+   ========================================================= */
+:root{
+  --bg:#ffffff;
+  --fg:#0a0a0a;
+  --muted:#6b6b6b;
+  --line:#e8e8e8;
+  --line-strong:#d6d6d6;
+  --surface:#f7f7f7;
+
+  --radius-lg:22px;
+  --radius-md:14px;
+  --radius-pill:999px;
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 1px 2px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.22);
+  --shadow-lg:0 2px 4px rgba(0,0,0,.06), 0 26px 50px -20px rgba(0,0,0,.30);
+
+  --nav-h:64px;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+
+img,svg{ display:block; max-width:100%; }
+a{ color:inherit; }
+button{ font-family:inherit; }
+
+:focus-visible{ outline:2px solid var(--fg); outline-offset:3px; border-radius:6px; }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+
+/* =========================================================
+   2. NAVBAR
+   ========================================================= */
+.navbar{
+  position:sticky; top:0; z-index:500;
+  height:var(--nav-h);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px;
+  padding:0 clamp(16px, 4vw, 34px);
+  background:rgba(255,255,255,.86);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--line);
+}
+
+.brand{
+  display:inline-flex; align-items:center; gap:10px;
+  text-decoration:none; font-weight:800; font-size:1.16rem;
+  letter-spacing:-.03em; color:var(--fg);
+  padding:6px 4px; border-radius:10px;
+}
+.brand svg{ width:26px; height:26px; }
+.brand span{ line-height:1; }
+
+.nav-actions{ display:flex; align-items:center; gap:10px; }
+
+.icon-btn{
+  position:relative;
+  display:grid; place-items:center;
+  width:40px; height:40px;
+  border-radius:var(--radius-pill);
+  border:1px solid var(--line);
+  background:#fff; color:var(--fg);
+  cursor:pointer;
+  transition:background .2s ease, border-color .2s ease, transform .15s ease;
+}
+.icon-btn:hover{ background:var(--surface); border-color:var(--line-strong); }
+.icon-btn:active{ transform:scale(.94); }
+.icon-btn svg{ width:20px; height:20px; }
+
+.icon-btn .badge{
+  position:absolute; top:7px; right:8px;
+  width:9px; height:9px; border-radius:50%;
+  background:var(--fg); border:2px solid #fff;
+}
+
+/* =========================================================
+   3. LAYOUT
+   ========================================================= */
+main{ flex:1; }
+
+.booking{
+  width:100%; max-width:760px;
+  margin:0 auto;
+  padding:clamp(20px, 3vw, 36px) clamp(16px, 4vw, 32px) clamp(48px, 7vw, 80px);
+}
+
+.booking__head{ margin-bottom:clamp(20px, 3vw, 30px); }
+
+.back-link{
+  display:inline-flex; align-items:center; gap:8px;
+  margin-bottom:16px;
+  padding:7px 14px 7px 10px;
+  border-radius:var(--radius-pill);
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:.84rem; font-weight:600;
+  text-decoration:none; color:var(--fg);
+  transition:background .2s ease, border-color .2s ease;
+}
+.back-link:hover{ background:var(--surface); border-color:var(--line-strong); }
+.back-link svg{ width:15px; height:15px; }
+
+.booking__head h1{
+  margin:0;
+  font-size:clamp(1.55rem, 3.4vw, 2.1rem);
+  font-weight:800;
+  letter-spacing:-.04em;
+  line-height:1.1;
+}
+
+/* =========================================================
+   4. STEPPER
+   ========================================================= */
+.stepper{
+  display:flex; align-items:flex-start; gap:0;
+  list-style:none; margin:0 0 clamp(22px, 3.5vw, 32px); padding:0;
+}
+
+.stepper__item{
+  position:relative; flex:1;
+  display:flex; flex-direction:column; align-items:center;
+  gap:9px; text-align:center;
+}
+
+.stepper__item::before,
+.stepper__item::after{
+  content:""; position:absolute; top:15px; height:2px;
+  background:var(--line);
+  transition:background .35s ease;
+}
+.stepper__item::before{ left:0; right:50%; }
+.stepper__item::after{ left:50%; right:0; }
+.stepper__item:first-child::before,
+.stepper__item:last-child::after{ display:none; }
+
+.stepper__item.is-done::before,
+.stepper__item.is-done::after,
+.stepper__item.is-active::before{ background:var(--fg); }
+
+.stepper__dot{
+  position:relative; z-index:1;
+  display:grid; place-items:center;
+  width:32px; height:32px;
+  border-radius:50%;
+  border:2px solid var(--line);
+  background:#fff;
+  font-size:.8rem; font-weight:700;
+  color:var(--muted);
+  transition:background .3s ease, border-color .3s ease, color .3s ease;
+}
+.stepper__item.is-active .stepper__dot,
+.stepper__item.is-done .stepper__dot{
+  background:var(--fg); border-color:var(--fg); color:#fff;
+}
+.stepper__dot svg{ width:14px; height:14px; }
+
+.stepper__label{
+  font-size:.76rem; font-weight:600;
+  color:var(--muted);
+  transition:color .3s ease;
+  padding:0 6px;
+}
+.stepper__item.is-active .stepper__label,
+.stepper__item.is-done .stepper__label{ color:var(--fg); }
+
+/* =========================================================
+   5. PANELS
+   ========================================================= */
+.panel{ display:none; }
+.panel.is-active{
+  display:block;
+  animation:panelIn .38s var(--ease) both;
+}
+
+@keyframes panelIn{
+  from{ opacity:0; transform:translateY(12px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.panel__title{
+  margin:0 0 clamp(18px, 2.6vw, 26px);
+  font-size:clamp(1.1rem, 2vw, 1.3rem);
+  font-weight:700;
+  letter-spacing:-.028em;
+}
+
+/* =========================================================
+   6. FIELDS
+   ========================================================= */
+.field{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.field:last-child{ margin-bottom:0; }
+
+.field label{
+  font-size:.8rem; font-weight:600;
+  letter-spacing:.01em; color:#3d3d3d;
+}
+
+.field input,
+.field select{
+  width:100%;
+  padding:13px 15px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+  background:#fff;
+  font-family:inherit;
+  font-size:.94rem;
+  color:var(--fg);
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.field input::placeholder{ color:#a6a6a6; }
+.field input[type="date"]{ cursor:pointer; }
+.field input[type="date"]::-webkit-calendar-picker-indicator{ cursor:pointer; }
+
+.field input:focus,
+.field select:focus{
+  outline:none;
+  border-color:var(--fg);
+  box-shadow:0 0 0 3px rgba(10,10,10,.07);
+}
+
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"]{
+  border-color:#c0392b;
+  box-shadow:0 0 0 3px rgba(192,57,43,.08);
+}
+
+.field select{
+  appearance:none;
+  -webkit-appearance:none;
+  padding-right:42px;
+  cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 15px center;
+  background-size:14px;
+}
+
+.field__error{
+  display:none;
+  font-size:.76rem;
+  color:#c0392b;
+  font-weight:500;
+}
+.field.has-error .field__error{ display:block; }
+.field.has-error input,
+.field.has-error select{ border-color:#c0392b; }
+
+/* Input + bouton carte */
+.input-with-btn{
+  display:flex; gap:8px;
+}
+.input-with-btn input{ flex:1; min-width:0; }
+
+.map-open-btn{
+  flex:none;
+  display:inline-flex; align-items:center; gap:7px;
+  padding:0 16px;
+  border-radius:var(--radius-md);
+  border:1px solid var(--fg);
+  background:var(--fg);
+  color:#fff;
+  font-size:.84rem; font-weight:600;
+  cursor:pointer; white-space:nowrap;
+  transition:background .2s ease, border-color .2s ease;
+}
+.map-open-btn:hover{ background:#262626; border-color:#262626; }
+.map-open-btn svg{ width:15px; height:15px; }
+
+/* Hint sous les selects */
+.field__hint{
+  font-size:.78rem;
+  color:var(--muted);
+  margin:-2px 0 0;
+  display:flex; align-items:center; gap:6px;
+}
+.field__hint strong{ color:var(--fg); font-weight:600; }
+.field__hint svg{ width:14px; height:14px; flex:none; }
+
+/* Ligne à deux colonnes (étage + ascenseur) */
+.field-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+/* =========================================================
+   7. CHIPS (services additionnels)
+   ========================================================= */
+.chip-group{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px;
+}
+
+.chip{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  padding:14px 14px 15px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+  background:#fff;
+  cursor:pointer;
+  text-align:left;
+  transition:border-color .2s ease, background .2s ease, transform .15s ease, box-shadow .2s ease;
+}
+.chip:hover{ border-color:var(--line-strong); background:var(--surface); }
+.chip:active{ transform:scale(.985); }
+
+.chip input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+  width:1px; height:1px;
+}
+
+.chip__title{
+  font-size:.9rem;
+  font-weight:700;
+  letter-spacing:-.015em;
+  line-height:1.25;
+}
+
+.chip__desc{
+  font-size:.75rem;
+  color:var(--muted);
+  line-height:1.35;
+}
+
+.chip__price{
+  margin-top:3px;
+  font-size:.8rem;
+  font-weight:700;
+  letter-spacing:-.01em;
+}
+
+.chip:has(input:checked){
+  border-color:var(--fg);
+  background:#fff;
+  box-shadow:0 0 0 1px var(--fg), var(--shadow-sm);
+}
+.chip:has(input:checked)::after{
+  content:"";
+  position:absolute;
+  top:11px; right:11px;
+  width:16px; height:16px;
+  border-radius:50%;
+  background:var(--fg)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>")
+    center/11px no-repeat;
+}
+.chip:has(input:focus-visible){
+  outline:2px solid var(--fg);
+  outline-offset:3px;
+}
+
+/* =========================================================
+   8. ESTIMATION LIVE
+   ========================================================= */
+.estimate{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+  margin-top:22px;
+  padding:15px 18px;
+  border-radius:var(--radius-md);
+  background:var(--surface);
+  border:1px solid var(--line);
+}
+.estimate span{
+  font-size:.82rem;
+  font-weight:600;
+  color:var(--muted);
+}
+.estimate strong{
+  font-size:1.05rem;
+  font-weight:800;
+  letter-spacing:-.025em;
+}
+
+/* =========================================================
+   9. RÉCAP
+   ========================================================= */
+.recap{
+  margin-top:clamp(22px, 3vw, 30px);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  background:var(--surface);
+  padding:clamp(16px, 2vw, 22px);
+}
+
+.recap__head{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px;
+}
+.recap__head h3{
+  margin:0; font-size:.92rem; font-weight:700; letter-spacing:-.015em;
+}
+
+.recap__list{ margin:0; display:grid; gap:0; }
+
+.recap__row{
+  display:grid;
+  grid-template-columns:130px 1fr;
+  gap:14px;
+  padding:11px 0;
+  border-top:1px solid var(--line);
+}
+.recap__row:first-child{ border-top:0; padding-top:0; }
+.recap__row:last-child{ padding-bottom:0; }
+
+.recap__row dt{
+  font-size:.8rem; font-weight:600;
+  color:var(--muted);
+}
+.recap__row dd{
+  margin:0; font-size:.9rem; font-weight:500;
+  color:var(--fg); word-break:break-word;
+}
+
+.recap__total{
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--line-strong);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+}
+.recap__total-label{
+  font-size:.8rem; font-weight:600;
+  color:var(--muted);
+}
+.recap__total-value{
+  font-size:clamp(1.2rem, 2.6vw, 1.5rem);
+  font-weight:800;
+  letter-spacing:-.03em;
+}
+
+/* =========================================================
+   10. CONTACT WIDGET
+   ========================================================= */
+.contact-widget{
+  margin-top:clamp(26px, 4vw, 36px);
+  padding-top:clamp(18px, 2.5vw, 22px);
+  border-top:1px dashed var(--line-strong);
+}
+
+.contact-toggle{
+  display:inline-flex; align-items:center; gap:9px;
+  padding:8px 0;
+  background:none; border:0;
+  font-family:inherit;
+  font-size:.85rem; font-weight:600;
+  color:var(--muted);
+  cursor:pointer;
+  transition:color .2s ease;
+}
+.contact-toggle:hover{ color:var(--fg); }
+.contact-toggle > svg:first-child{ width:16px; height:16px; }
+.contact-toggle > svg:last-child{ width:14px; height:14px; transition:transform .3s var(--ease); }
+.contact-widget.is-open .contact-toggle > svg:last-child{ transform:rotate(180deg); }
+
+.contact-options{
+  display:none;
+  gap:10px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+.contact-widget.is-open .contact-options{ display:flex; }
+
+.contact-btn{
+  display:inline-flex; align-items:center; gap:9px;
+  padding:11px 18px;
+  border-radius:var(--radius-pill);
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:.86rem; font-weight:600;
+  text-decoration:none; color:var(--fg);
+  transition:background .2s ease, border-color .2s ease, transform .15s ease;
+}
+.contact-btn:hover{ background:var(--surface); border-color:var(--line-strong); }
+.contact-btn:active{ transform:scale(.97); }
+.contact-btn svg{ width:16px; height:16px; }
+.contact-btn--wa svg{ color:#25D366; }
+
+/* =========================================================
+   11. NAVIGATION BAS
+   ========================================================= */
+.booking__nav{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px;
+  margin-top:clamp(22px, 3vw, 32px);
+  padding-top:clamp(18px, 2.5vw, 24px);
+  border-top:1px solid var(--line);
+}
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  padding:13px 24px;
+  border-radius:var(--radius-pill);
+  border:1px solid transparent;
+  font-family:inherit;
+  font-size:.9rem; font-weight:600;
+  letter-spacing:-.01em;
+  cursor:pointer;
+  text-decoration:none;
+  transition:background .22s ease, border-color .22s ease, color .22s ease, transform .15s ease, opacity .22s ease;
+}
+.btn:active{ transform:scale(.975); }
+.btn svg{ width:16px; height:16px; }
+
+.btn--primary{ background:var(--fg); color:#fff; border-color:var(--fg); }
+.btn--primary:hover{ background:#262626; border-color:#262626; }
+
+.btn--ghost{ background:#fff; color:var(--fg); border-color:var(--line); }
+.btn--ghost:hover{ background:var(--surface); border-color:var(--line-strong); }
+
+.btn[disabled]{ opacity:.5; cursor:not-allowed; pointer-events:none; }
+
+.booking__nav .spacer{ flex:1; }
+
+/* =========================================================
+   12. MODALE CARTE
+   ========================================================= */
+.map-modal{
+  position:fixed; inset:0; z-index:1000;
+  display:none;
+  background:rgba(0,0,0,.55);
+  -webkit-backdrop-filter:blur(5px);
+  backdrop-filter:blur(5px);
+  padding:16px;
+}
+.map-modal.is-open{ display:flex; align-items:center; justify-content:center; }
+
+.map-modal__panel{
+  width:100%; max-width:660px;
+  max-height:92dvh;
+  background:#fff;
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:var(--shadow-lg);
+  animation:modalIn .3s var(--ease) both;
+}
+
+@keyframes modalIn{
+  from{ opacity:0; transform:translateY(14px) scale(.98); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+.map-modal__head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+}
+.map-modal__head h3{
+  margin:0; font-size:1rem; font-weight:700; letter-spacing:-.02em;
+}
+.map-modal__close{
+  display:grid; place-items:center;
+  width:34px; height:34px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#fff; color:var(--fg);
+  cursor:pointer;
+  transition:background .2s ease;
+}
+.map-modal__close:hover{ background:var(--surface); }
+.map-modal__close svg{ width:16px; height:16px; }
+
+.map-modal__map-wrap{
+  position:relative;
+  flex:1;
+  min-height:320px;
+}
+
+#modalMap{
+  width:100%; height:100%;
+  min-height:320px;
+  z-index:0;
+}
+#modalMap .leaflet-tile-pane{
+  filter:grayscale(1) contrast(1.04) brightness(1.05);
+}
+
+.map-modal__tools{
+  position:absolute;
+  top:12px; right:12px;
+  z-index:400;
+  display:flex; gap:6px;
+}
+
+.map-tool-btn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:8px 12px;
+  border-radius:var(--radius-pill);
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.96);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+  font-family:inherit;
+  font-size:.76rem; font-weight:600;
+  color:var(--fg);
+  cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  transition:background .2s ease;
+}
+.map-tool-btn:hover{ background:#fff; }
+.map-tool-btn svg{ width:13px; height:13px; }
+
+.map-modal__foot{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+  padding:14px 20px;
+  border-top:1px solid var(--line);
+}
+
+.map-modal__hint{
+  font-size:.78rem;
+  color:var(--muted);
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.map-modal__actions{ display:flex; gap:10px; flex:none; }
+
+.map-pin span{
+  display:block;
+  width:20px; height:20px;
+  border-radius:50%;
+  background:var(--fg);
+  border:3px solid #fff;
+  box-shadow:0 3px 10px rgba(0,0,0,.4);
+  animation:pinDrop .3s var(--ease) both;
+}
+@keyframes pinDrop{
+  from{ transform:scale(.4); opacity:0; }
+  to{ transform:scale(1); opacity:1; }
+}
+
+/* =========================================================
+   13. SUCCÈS
+   ========================================================= */
+.success{
+  display:none;
+  text-align:center;
+  padding:clamp(30px, 6vw, 60px) 0;
+  animation:panelIn .45s var(--ease) both;
+}
+.success.is-active{ display:block; }
+
+.success__icon{
+  width:72px; height:72px;
+  margin:0 auto 22px;
+  border-radius:50%;
+  display:grid; place-items:center;
+  background:var(--fg); color:#fff;
+}
+.success__icon svg{ width:34px; height:34px; }
+
+.success h2{
+  margin:0 0 10px;
+  font-size:clamp(1.4rem, 3vw, 1.9rem);
+  font-weight:800;
+  letter-spacing:-.035em;
+}
+
+.success p{
+  margin:0 auto 14px;
+  max-width:46ch;
+  color:var(--muted);
+  font-size:.94rem;
+}
+
+.success__ref{
+  display:inline-block;
+  margin:6px 0 26px;
+  padding:9px 18px;
+  border-radius:var(--radius-pill);
+  background:var(--surface);
+  border:1px solid var(--line);
+  font-size:.86rem; font-weight:700;
+  letter-spacing:.06em;
+}
+
+/* =========================================================
+   14. FOOTER
+   ========================================================= */
+.footer{
+  border-top:1px solid var(--line);
+  padding:clamp(32px, 5vw, 56px) clamp(16px, 4vw, 32px) 22px;
+  background:#fff;
+}
+
+.footer__inner{
+  max-width:1320px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:1.1fr 2fr;
+  gap:clamp(28px, 5vw, 64px);
+}
+
+.footer__brand p{
+  margin:14px 0 0;
+  color:var(--muted);
+  font-size:.88rem;
+  max-width:34ch;
+}
+
+.footer__cols{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:24px;
+}
+
+.footer__cols h3{
+  margin:0 0 14px;
+  font-size:.72rem; font-weight:700;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+.footer__cols ul{
+  list-style:none; margin:0; padding:0;
+  display:grid; gap:10px;
+}
+
+.footer__cols a{
+  font-size:.88rem;
+  text-decoration:none;
+  color:var(--fg);
+  opacity:.78;
+  transition:opacity .2s ease;
+}
+.footer__cols a:hover{ opacity:1; text-decoration:underline; }
+
+.footer__bottom{
+  max-width:1320px;
+  margin:clamp(28px, 4vw, 46px) auto 0;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap;
+  font-size:.82rem;
+  color:var(--muted);
+}
+
+.footer__legal{ display:flex; gap:22px; flex-wrap:wrap; }
+.footer__legal a{ color:var(--muted); text-decoration:none; transition:color .2s ease; }
+.footer__legal a:hover{ color:var(--fg); }
+
+/* =========================================================
+   15. RESPONSIVE
+   ========================================================= */
+@media (max-width:780px){
+  .footer__inner{ grid-template-columns:1fr; }
+  .footer__cols{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:26px 20px; }
+}
+
+@media (max-width:560px){
+  .stepper__label{ font-size:.68rem; }
+
+  .input-with-btn{ flex-direction:column; }
+  .map-open-btn{ padding:12px 16px; justify-content:center; }
+
+  .field-row{ grid-template-columns:1fr; gap:20px; }
+  .chip-group{ grid-template-columns:1fr; }
+
+  .recap__row{ grid-template-columns:1fr; gap:4px; }
+
+  .booking__nav{ flex-direction:column-reverse; align-items:stretch; }
+  .booking__nav .btn{ width:100%; }
+  .booking__nav .spacer{ display:none; }
+
+  .map-modal__foot{ flex-direction:column; align-items:stretch; }
+  .map-modal__hint{ white-space:normal; }
+  .map-modal__actions{ width:100%; }
+  .map-modal__actions .btn{ flex:1; }
+
+  .footer__cols{ grid-template-columns:1fr; }
+  .footer__bottom{ flex-direction:column; align-items:flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= NAVBAR ================= -->
+<header class="navbar">
+  <a class="brand" href="/" aria-label="merobox, retour à l'accueil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 8.5v7a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 15.5v-7a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8.5Z"/>
+      <path d="m3.3 7.5 8.7 5 8.7-5"/>
+      <path d="M12 22V12.5"/>
+    </svg>
+    <span>merobox</span>
+  </a>
+
+  <div class="nav-actions">
+    <button class="icon-btn" type="button" id="notifBtn" aria-label="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <span class="badge" aria-hidden="true"></span>
+    </button>
+
+    <button class="icon-btn" type="button" id="profileBtn" aria-label="Mon profil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ================= MAIN ================= -->
+<main>
+  <div class="booking">
+
+    <!-- En-tête -->
+    <div class="booking__head" id="bookingHead">
+      <a class="back-link" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+        </svg>
+        Services
+      </a>
+      <h1>Déménagement</h1>
+    </div>
+
+    <!-- Stepper -->
+    <ol class="stepper" id="stepper" aria-label="Étapes">
+      <li class="stepper__item is-active" data-step="1">
+        <span class="stepper__dot">1</span>
+        <span class="stepper__label">Itinéraire</span>
+      </li>
+      <li class="stepper__item" data-step="2">
+        <span class="stepper__dot">2</span>
+        <span class="stepper__label">Logement</span>
+      </li>
+      <li class="stepper__item" data-step="3">
+        <span class="stepper__dot">3</span>
+        <span class="stepper__label">Contact</span>
+      </li>
+    </ol>
+
+    <!-- Formulaire -->
+    <form id="moveForm" novalidate>
+
+      <!-- ============ ÉTAPE 1 ============ -->
+      <section class="panel is-active" data-panel="1">
+        <h2 class="panel__title">D'où partez-vous et où allez-vous ?</h2>
+
+        <div class="field" id="fieldPickup">
+          <label for="pickupAddress">Lieu de départ</label>
+          <div class="input-with-btn">
+            <input type="text" id="pickupAddress" name="pickupAddress"
+                   placeholder="Adresse actuelle ou point sur la carte"
+                   autocomplete="street-address">
+            <button type="button" class="map-open-btn" data-open-map="pickup">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              Carte
+            </button>
+          </div>
+          <span class="field__error">Indiquez le lieu de départ.</span>
+        </div>
+
+        <div class="field" id="fieldDrop">
+          <label for="dropAddress">Lieu d'arrivée</label>
+          <div class="input-with-btn">
+            <input type="text" id="dropAddress" name="dropAddress"
+                   placeholder="Nouvelle adresse ou point sur la carte"
+                   autocomplete="street-address">
+            <button type="button" class="map-open-btn" data-open-map="drop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              Carte
+            </button>
+          </div>
+          <span class="field__error">Indiquez le lieu d'arrivée.</span>
+        </div>
+
+        <!-- Contact -->
+        <div class="contact-widget">
+          <button type="button" class="contact-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Besoin d'aide ? Contacter le service
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="contact-options">
+            <a class="contact-btn contact-btn--wa" href="https://wa.me/221781941351" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.3-.8-.7-1.3-1.6-1.5-1.9-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s.9 2.5 1 2.6c.1.2 1.7 2.7 4.2 3.7.6.2 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.2-.2-.5-.3z"/>
+                <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.2-.4-4.6-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>
+              </svg>
+              WhatsApp
+            </a>
+            <a class="contact-btn" href="tel:+221781941351">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>
+              </svg>
+              Appeler
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ÉTAPE 2 ============ -->
+      <section class="panel" data-panel="2">
+        <h2 class="panel__title">Votre logement</h2>
+
+        <!-- Type de logement -->
+        <div class="field" id="fieldHousing">
+          <label for="housingType">Type de logement</label>
+          <select id="housingType" name="housingType">
+            <option value="">— Sélectionner —</option>
+            <option value="studio" data-label="Studio"        data-vehicle="Camionnette"  data-price="25000">Studio</option>
+            <option value="t1"     data-label="T1"            data-vehicle="Camionnette"  data-price="35000">T1</option>
+            <option value="t2"     data-label="T2"            data-vehicle="Mini camion"  data-price="50000">T2</option>
+            <option value="t3"     data-label="T3"            data-vehicle="Mini camion"  data-price="75000">T3</option>
+            <option value="t4"     data-label="T4"            data-vehicle="Grand camion" data-price="100000">T4</option>
+            <option value="t5"     data-label="T5 et +"       data-vehicle="Grand camion" data-price="150000">T5 et +</option>
+            <option value="maison" data-label="Maison / Villa" data-vehicle="Grand camion" data-price="200000">Maison / Villa</option>
+          </select>
+          <p class="field__hint" id="vehicleHint" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM23 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
+              <path d="M5 17V9a2 2 0 0 1 2-2h6l3 4h5a2 2 0 0 1 2 2v4"/>
+            </svg>
+            Véhicule assigné : <strong id="vehicleName">—</strong>
+          </p>
+          <span class="field__error">Sélectionnez un type de logement.</span>
+        </div>
+
+        <!-- Étage + ascenseur -->
+        <div class="field-row">
+          <div class="field" id="fieldFloor">
+            <label for="floor">Étage</label>
+            <select id="floor" name="floor">
+              <option value="">— Sélectionner —</option>
+              <option value="rdc" data-label="Rez-de-chaussée"    data-surcharge="0">Rez-de-chaussée</option>
+              <option value="1"   data-label="1er étage"          data-surcharge="5000">1er étage</option>
+              <option value="2"   data-label="2ème étage"         data-surcharge="10000">2ème étage</option>
+              <option value="3"   data-label="3ème étage et +"    data-surcharge="15000">3ème étage et +</option>
+            </select>
+            <span class="field__error">Sélectionnez l'étage.</span>
+          </div>
+
+          <div class="field" id="fieldElevator">
+            <label for="elevator">Ascenseur</label>
+            <select id="elevator" name="elevator">
+              <option value="">— Sélectionner —</option>
+              <option value="oui" data-label="Oui">Oui</option>
+              <option value="non" data-label="Non">Non</option>
+            </select>
+            <span class="field__error">Précisez l'ascenseur.</span>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div class="field" id="fieldDate">
+          <label for="moveDate">Date souhaitée</label>
+          <input type="date" id="moveDate" name="moveDate">
+          <span class="field__error">Sélectionnez une date.</span>
+        </div>
+
+        <!-- Services additionnels -->
+        <div class="field" id="fieldServices">
+          <label>Services additionnels</label>
+          <div class="chip-group">
+            <label class="chip">
+              <input type="checkbox" name="services" value="emballage"
+                     data-label="Emballage" data-price="15000">
+              <span class="chip__title">Emballage</span>
+              <span class="chip__desc">Fourniture + mise en carton</span>
+              <span class="chip__price">+15 000 FCFA</span>
+            </label>
+
+            <label class="chip">
+              <input type="checkbox" name="services" value="démontage"
+                     data-label="Démontage / remontage" data-price="10000">
+              <span class="chip__title">Démontage / remontage</span>
+              <span class="chip__desc">Meubles et équipements</span>
+              <span class="chip__price">+10 000 FCFA</span>
+            </label>
+
+            <label class="chip">
+              <input type="checkbox" name="services" value="monte-meuble"
+                     data-label="Monte-meuble" data-price="20000">
+              <span class="chip__title">Monte-meuble</span>
+              <span class="chip__desc">Pour les étages élevés</span>
+              <span class="chip__price">+20 000 FCFA</span>
+            </label>
+
+            <label class="chip">
+              <input type="checkbox" name="services" value="garde-meuble"
+                     data-label="Garde-meuble" data-price="25000">
+              <span class="chip__title">Garde-meuble</span>
+              <span class="chip__desc">Stockage temporaire</span>
+              <span class="chip__price">+25 000 FCFA</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Estimation -->
+        <div class="estimate" id="estimate" hidden>
+          <span>Estimation</span>
+          <strong id="estimateValue">—</strong>
+        </div>
+
+        <!-- Contact -->
+        <div class="contact-widget">
+          <button type="button" class="contact-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Besoin d'aide ? Contacter le service
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="contact-options">
+            <a class="contact-btn contact-btn--wa" href="https://wa.me/221781941351" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.3-.8-.7-1.3-1.6-1.5-1.9-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s.9 2.5 1 2.6c.1.2 1.7 2.7 4.2 3.7.6.2 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.2-.2-.5-.3z"/>
+                <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.2-.4-4.6-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>
+              </svg>
+              WhatsApp
+            </a>
+            <a class="contact-btn" href="tel:+221781941351">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>
+              </svg>
+              Appeler
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ÉTAPE 3 ============ -->
+      <section class="panel" data-panel="3">
+        <h2 class="panel__title">Vos coordonnées</h2>
+
+        <div class="field" id="fieldPhone">
+          <label for="phone">Téléphone</label>
+          <input type="tel" id="phone" name="phone" inputmode="tel"
+                 autocomplete="tel" placeholder="Ex : 77 123 45 67">
+          <span class="field__error">Numéro invalide (au moins 7 chiffres).</span>
+        </div>
+
+        <!-- Récap -->
+        <div class="recap">
+          <div class="recap__head">
+            <h3>Récapitulatif</h3>
+          </div>
+          <dl class="recap__list">
+            <div class="recap__row">
+              <dt>Départ</dt>
+              <dd data-recap="pickup">—</dd>
+            </div>
+            <div class="recap__row">
+              <dt>Arrivée</dt>
+              <dd data-recap="drop">—</dd>
+            </div>
+            <div class="recap__row">
+              <dt>Logement</dt>
+              <dd data-recap="housing">—</dd>
+            </div>
+            <div class="recap__row">
+              <dt>Étage</dt>
+              <dd data-recap="floor">—</dd>
+            </div>
+            <div class="recap__row">
+              <dt>Date</dt>
+              <dd data-recap="date">—</dd>
+            </div>
+            <div class="recap__row">
+              <dt>Services</dt>
+              <dd data-recap="services">—</dd>
+            </div>
+          </dl>
+          <div class="recap__total">
+            <span class="recap__total-label">Total estimé</span>
+            <span class="recap__total-value" data-recap="total">—</span>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="contact-widget">
+          <button type="button" class="contact-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Besoin d'aide ? Contacter le service
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="contact-options">
+            <a class="contact-btn contact-btn--wa" href="https://wa.me/221781941351" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.3-.8-.7-1.3-1.6-1.5-1.9-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s.9 2.5 1 2.6c.1.2 1.7 2.7 4.2 3.7.6.2 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.2-.2-.5-.3z"/>
+                <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.2-.4-4.6-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/>
+              </svg>
+              WhatsApp
+            </a>
+            <a class="contact-btn" href="tel:+221781941351">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>
+              </svg>
+              Appeler
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </form>
+
+    <!-- Écran de succès -->
+    <div class="success" id="successScreen" role="status" aria-live="polite">
+      <div class="success__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2>Déménagement confirmé</h2>
+      <p>Un chef d'équipe vous contactera pour valider les détails. Merci de votre confiance.</p>
+      <div class="success__ref" id="successRef">RÉF. —</div>
+      <div>
+        <a class="btn btn--primary" href="/">Retour à l'accueil</a>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="booking__nav" id="bookingNav">
+      <button class="btn btn--ghost" type="button" id="btnBack">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+        </svg>
+        <span id="btnBackLabel">Annuler</span>
+      </button>
+
+      <button class="btn btn--primary" type="button" id="btnNext">
+        <span id="btnNextLabel">Continuer</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+</main>
+
+<!-- ================= MODALE CARTE ================= -->
+<div class="map-modal" id="mapModal" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+  <div class="map-modal__panel">
+    <div class="map-modal__head">
+      <h3 id="mapModalTitle">Choisir un point</h3>
+      <button type="button" class="map-modal__close" id="mapModalClose" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="map-modal__map-wrap">
+      <div id="modalMap"></div>
+      <div class="map-modal__tools">
+        <button type="button" class="map-tool-btn" id="mapLocate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            <circle cx="12" cy="12" r="8"/>
+          </svg>
+          Ma position
+        </button>
+      </div>
+    </div>
+
+    <div class="map-modal__foot">
+      <span class="map-modal__hint" id="mapModalHint">Touchez la carte pour placer un point.</span>
+      <div class="map-modal__actions">
+        <button type="button" class="btn btn--ghost" id="mapModalCancel">Annuler</button>
+        <button type="button" class="btn btn--primary" id="mapModalValidate" disabled>Valider</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <a class="brand" href="/" aria-label="merobox, retour à l'accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8.5v7a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 15.5v-7a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8.5Z"/>
+          <path d="m3.3 7.5 8.7 5 8.7-5"/>
+          <path d="M12 22V12.5"/>
+        </svg>
+        <span>merobox</span>
+      </a>
+      <p>Des services du quotidien, simples, rapides et fiables.</p>
+    </div>
+
+    <nav class="footer__cols" aria-label="Liens de pied de page">
+      <div>
+        <h3>Services</h3>
+        <ul>
+          <li><a href="/livraison">Livraison de colis</a></li>
+          <li><a href="/demenagement">Déménagement</a></li>
+          <li><a href="/fastfood">Fast-food</a></li>
+          <li><a href="/marketplace">Marketplace</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Entreprise</h3>
+        <ul>
+          <li><a href="/a-propos">À propos</a></li>
+          <li><a href="/devenir-coursier">Devenir coursier</a></li>
+          <li><a href="/partenaires">Partenaires</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Aide</h3>
+        <ul>
+          <li><a href="/faq">FAQ</a></li>
+          <li><a href="/suivi">Suivre une commande</a></li>
+          <li><a href="/conditions">Conditions d'utilisation</a></li>
+          <li><a href="/confidentialite">Confidentialité</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+
+  <div class="footer__bottom">
+    <span>© <span id="year">2025</span> merobox. Tous droits réservés.</span>
+    <div class="footer__legal">
+      <a href="/conditions">Conditions</a>
+      <a href="/confidentialite">Confidentialité</a>
+      <a href="/cookies">Cookies</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= LEAFLET ================= -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+(function () {
+  'use strict';
+
+  /* =====================================================
+     CONFIG
+     ===================================================== */
+  var CONFIG = {
+    defaultCenter: [14.6928, -17.4467], // Dakar
+    defaultZoom: 13,
+    currency: 'FCFA'
+  };
+
+  /* =====================================================
+     ÉTAT
+     ===================================================== */
+  var state = {
+    step: 1,
+    pickup: { address: '', latlng: null },
+    drop:   { address: '', latlng: null },
+    housingType: '', housingLabel: '', vehicle: '', basePrice: 0,
+    floor: '', floorLabel: '', floorSurcharge: 0,
+    elevator: '', elevatorLabel: '',
+    moveDate: '',
+    services: [],
+    phone: '',
+    total: 0
+  };
+
+  /* =====================================================
+     DOM
+     ===================================================== */
+  var panels     = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var stepItems  = Array.prototype.slice.call(document.querySelectorAll('.stepper__item'));
+  var btnBack    = document.getElementById('btnBack');
+  var btnBackLbl = document.getElementById('btnBackLabel');
+  var btnNext    = document.getElementById('btnNext');
+  var btnNextLbl = document.getElementById('btnNextLabel');
+  var bookingNav = document.getElementById('bookingNav');
+  var bookingHead= document.getElementById('bookingHead');
+  var stepper    = document.getElementById('stepper');
+  var successEl  = document.getElementById('successScreen');
+  var successRef = document.getElementById('successRef');
+
+  var inputs = {
+    pickupAddress: document.getElementById('pickupAddress'),
+    dropAddress:   document.getElementById('dropAddress'),
+    housingType:   document.getElementById('housingType'),
+    floor:         document.getElementById('floor'),
+    elevator:      document.getElementById('elevator'),
+    moveDate:      document.getElementById('moveDate'),
+    phone:         document.getElementById('phone')
+  };
+
+  var vehicleHint = document.getElementById('vehicleHint');
+  var vehicleName = document.getElementById('vehicleName');
+  var estimate    = document.getElementById('estimate');
+  var estimateVal = document.getElementById('estimateValue');
+
+  /* =====================================================
+     HELPERS
+     ===================================================== */
+  function formatPrice(n) {
+    return n.toLocaleString('fr-FR') + ' ' + CONFIG.currency;
+  }
+
+  function isValidPhone(v) {
+    return ((v || '').replace(/\D/g, '').length) >= 7;
+  }
+
+  function setFieldError(id, hasError) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('has-error', hasError);
+  }
+
+  function formatDateFr(iso) {
+    if (!iso) return '';
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return d.toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+  }
+
+  /* =====================================================
+     NAVIGATION
+     ===================================================== */
+  function goToStep(step) {
+    state.step = step;
+
+    panels.forEach(function (p) {
+      p.classList.toggle('is-active', Number(p.dataset.panel) === step);
+    });
+
+    stepItems.forEach(function (item) {
+      var n = Number(item.dataset.step);
+      item.classList.toggle('is-active', n === step);
+      item.classList.toggle('is-done', n < step);
+
+      var dot = item.querySelector('.stepper__dot');
+      if (n < step) {
+        dot.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M20 6 9 17l-5-5"/></svg>';
+      } else {
+        dot.textContent = String(n);
+      }
+    });
+
+    btnBackLbl.textContent = step === 1 ? 'Annuler' : 'Précédent';
+    btnNextLbl.textContent = step === 3 ? 'Confirmer' : 'Continuer';
+
+    if (step === 3) renderRecap();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* =====================================================
+     VALIDATION
+     ===================================================== */
+  function validateStep1() {
+    var ok = true;
+
+    var pa = inputs.pickupAddress.value.trim();
+    var da = inputs.dropAddress.value.trim();
+
+    setFieldError('fieldPickup', !pa);
+    if (!pa) ok = false;
+
+    setFieldError('fieldDrop', !da);
+    if (!da) ok = false;
+
+    if (!ok) {
+      var firstErr = document.querySelector('.field.has-error input');
+      if (firstErr) firstErr.focus();
+    }
+    return ok;
+  }
+
+  function validateStep2() {
+    var ok = true;
+
+    setFieldError('fieldHousing', !inputs.housingType.value);
+    if (!inputs.housingType.value) ok = false;
+
+    setFieldError('fieldFloor', !inputs.floor.value);
+    if (!inputs.floor.value) ok = false;
+
+    setFieldError('fieldElevator', !inputs.elevator.value);
+    if (!inputs.elevator.value) ok = false;
+
+    setFieldError('fieldDate', !inputs.moveDate.value);
+    if (!inputs.moveDate.value) ok = false;
+
+    if (!ok) {
+      var firstErr = document.querySelector('.field.has-error select, .field.has-error input');
+      if (firstErr) firstErr.focus();
+    }
+    return ok;
+  }
+
+  function validateStep3() {
+    var p = inputs.phone.value.trim();
+    var ok = isValidPhone(p);
+    setFieldError('fieldPhone', !ok);
+    if (!ok) inputs.phone.focus();
+    return ok;
+  }
+
+  /* =====================================================
+     COLLECTE
+     ===================================================== */
+  function collectStep1() {
+    state.pickup.address = inputs.pickupAddress.value.trim();
+    state.drop.address   = inputs.dropAddress.value.trim();
+  }
+
+  function collectStep2() {
+    var h = inputs.housingType;
+    var f = inputs.floor;
+    var e = inputs.elevator;
+
+    state.housingType  = h.value;
+    state.housingLabel = h.options[h.selectedIndex].dataset.label || '';
+    state.vehicle      = h.options[h.selectedIndex].dataset.vehicle || '';
+    state.basePrice    = Number(h.options[h.selectedIndex].dataset.price) || 0;
+
+    state.floor        = f.value;
+    state.floorLabel   = f.options[f.selectedIndex].dataset.label || '';
+    state.floorSurcharge = Number(f.options[f.selectedIndex].dataset.surcharge) || 0;
+
+    state.elevator      = e.value;
+    state.elevatorLabel = e.options[e.selectedIndex].dataset.label || '';
+
+    state.moveDate = inputs.moveDate.value;
+
+    state.services = [];
+    document.querySelectorAll('input[name="services"]:checked').forEach(function (cb) {
+      state.services.push({
+        value: cb.value,
+        label: cb.dataset.label,
+        price: Number(cb.dataset.price) || 0
+      });
+    });
+
+    // Calcul du total
+    var total = state.basePrice;
+    if (state.floor !== 'rdc' && state.elevator === 'non') {
+      total += state.floorSurcharge;
+    }
+    state.services.forEach(function (s) { total += s.price; });
+    state.total = total;
+  }
+
+  function collectStep3() {
+    state.phone = inputs.phone.value.trim();
+  }
+
+  /* =====================================================
+     ESTIMATION LIVE (étape 2)
+     ===================================================== */
+  function updateEstimate() {
+    // Calculer sans écraser l'état final (juste pour l'affichage)
+    var h = inputs.housingType;
+    var f = inputs.floor;
+    var e = inputs.elevator;
+
+    var base = Number(h.options[h.selectedIndex] && h.options[h.selectedIndex].dataset.price) || 0;
+    var surcharge = Number(f.options[f.selectedIndex] && f.options[f.selectedIndex].dataset.surcharge) || 0;
+    var floorVal = f.value;
+    var elevVal = e.value;
+
+    var total = base;
+    if (floorVal && floorVal !== 'rdc' && elevVal === 'non') {
+      total += surcharge;
+    }
+    document.querySelectorAll('input[name="services"]:checked').forEach(function (cb) {
+      total += Number(cb.dataset.price) || 0;
+    });
+
+    if (total > 0) {
+      estimateVal.textContent = formatPrice(total);
+      estimate.hidden = false;
+    } else {
+      estimate.hidden = true;
+    }
+  }
+
+  /* =====================================================
+     RÉCAP (étape 3)
+     ===================================================== */
+  function renderRecap() {
+    var setText = function (key, value) {
+      var el = document.querySelector('[data-recap="' + key + '"]');
+      if (el) el.textContent = value || '—';
+    };
+
+    setText('pickup', state.pickup.address);
+    setText('drop',   state.drop.address);
+
+    setText('housing',
+      state.vehicle
+        ? state.housingLabel + ' — ' + state.vehicle
+        : state.housingLabel
+    );
+
+    var floorText = state.floorLabel;
+    if (state.floor && state.floor !== 'rdc') {
+      floorText += state.elevator === 'oui' ? ' — avec ascenseur' : ' — sans ascenseur';
+    } else if (state.elevatorLabel) {
+      floorText += ' — ' + state.elevatorLabel.toLowerCase();
+    }
+    setText('floor', floorText);
+
+    setText('date', formatDateFr(state.moveDate));
+
+    setText('services',
+      state.services.length
+        ? state.services.map(function (s) { return s.label; }).join(', ')
+        : 'Aucun'
+    );
+
+    setText('total', state.total ? formatPrice(state.total) : '—');
+  }
+
+  /* =====================================================
+     BOUTON SUIVANT
+     ===================================================== */
+  btnNext.addEventListener('click', function () {
+    if (state.step === 1) {
+      if (!validateStep1()) return;
+      collectStep1();
+      goToStep(2);
+      return;
+    }
+    if (state.step === 2) {
+      if (!validateStep2()) return;
+      collectStep2();
+      goToStep(3);
+      return;
+    }
+    if (state.step === 3) {
+      if (!validateStep3()) return;
+      collectStep3();
+      submitOrder();
+    }
+  });
+
+  /* =====================================================
+     BOUTON RETOUR
+     ===================================================== */
+  btnBack.addEventListener('click', function () {
+    if (state.step === 1) {
+      window.location.href = '/';
+      return;
+    }
+    goToStep(state.step - 1);
+  });
+
+  /* =====================================================
+     SOUMISSION
+     ===================================================== */
+  function submitOrder() {
+    btnNext.disabled = true;
+    btnNextLbl.textContent = 'Envoi…';
+
+    setTimeout(function () {
+      var ref = 'DEM-' + new Date().getFullYear() + '-' +
+                Math.random().toString(36).slice(2, 7).toUpperCase();
+
+      document.getElementById('moveForm').style.display = 'none';
+      bookingHead.style.display = 'none';
+      stepper.style.display = 'none';
+      bookingNav.style.display = 'none';
+
+      successRef.textContent = 'RÉF. ' + ref;
+      successEl.classList.add('is-active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      console.log('Déménagement :', {
+        reference: ref,
+        pickup:  { address: state.pickup.address, coords: state.pickup.latlng },
+        drop:    { address: state.drop.address,   coords: state.drop.latlng },
+        housing: {
+          type: state.housingLabel,
+          vehicle: state.vehicle,
+          floor: state.floorLabel,
+          elevator: state.elevatorLabel,
+          basePrice: state.basePrice,
+          floorSurcharge: state.floorSurcharge
+        },
+        services: state.services,
+        date: state.moveDate,
+        phone: state.phone,
+        total: state.total
+      });
+    }, 800);
+  }
+
+  /* =====================================================
+     WIDGET CONTACT
+     ===================================================== */
+  document.querySelectorAll('.contact-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.closest('.contact-widget').classList.toggle('is-open');
+    });
+  });
+
+  /* =====================================================
+     HINT VÉHICULE + ESTIMATION LIVE
+     ===================================================== */
+  inputs.housingType.addEventListener('change', function () {
+    var opt = inputs.housingType.options[inputs.housingType.selectedIndex];
+    var vehicle = opt.dataset.vehicle;
+    if (vehicle) {
+      vehicleName.textContent = vehicle;
+      vehicleHint.hidden = false;
+    } else {
+      vehicleHint.hidden = true;
+    }
+    updateEstimate();
+  });
+
+  inputs.floor.addEventListener('change', updateEstimate);
+  inputs.elevator.addEventListener('change', updateEstimate);
+
+  document.querySelectorAll('input[name="services"]').forEach(function (cb) {
+    cb.addEventListener('change', updateEstimate);
+  });
+
+  /* =====================================================
+     NETTOYAGE ERREURS
+     ===================================================== */
+  ['pickupAddress', 'dropAddress', 'phone'].forEach(function (k) {
+    inputs[k].addEventListener('input', function () {
+      var wrap = inputs[k].closest('.field');
+      if (wrap) wrap.classList.remove('has-error');
+    });
+  });
+
+  ['housingType', 'floor', 'elevator', 'moveDate'].forEach(function (k) {
+    inputs[k].addEventListener('change', function () {
+      var wrap = inputs[k].closest('.field');
+      if (wrap) wrap.classList.remove('has-error');
+    });
+  });
+
+  /* =====================================================
+     DATE MIN = AUJOURD'HUI
+     ===================================================== */
+  (function () {
+    if (inputs.moveDate) {
+      var today = new Date();
+      var iso = today.getFullYear() + '-' +
+                String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                String(today.getDate()).padStart(2, '0');
+      inputs.moveDate.min = iso;
+    }
+  })();
+
+  /* =====================================================
+     MODALE CARTE
+     ===================================================== */
+  var mapModal        = document.getElementById('mapModal');
+  var mapModalTitle   = document.getElementById('mapModalTitle');
+  var mapModalClose   = document.getElementById('mapModalClose');
+  var mapModalCancel  = document.getElementById('mapModalCancel');
+  var mapModalValidate= document.getElementById('mapModalValidate');
+  var mapModalHint    = document.getElementById('mapModalHint');
+  var mapLocateBtn    = document.getElementById('mapLocate');
+
+  var modalMap = null;
+  var modalMarker = null;
+  var modalLatLng = null;
+  var modalTarget = null;
+
+  var pinIcon = L.divIcon({
+    className: 'map-pin',
+    html: '<span></span>',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  });
+
+  function openMapModal(target) {
+    modalTarget = target;
+
+    mapModalTitle.textContent = target === 'pickup'
+      ? 'Lieu de départ'
+      : "Lieu d'arrivée";
+
+    modalLatLng = null;
+    mapModalValidate.disabled = true;
+    mapModalHint.textContent = 'Touchez la carte pour placer un point.';
+
+    mapModal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+
+    if (!modalMap) {
+      modalMap = L.map('modalMap', {
+        center: CONFIG.defaultCenter,
+        zoom: CONFIG.defaultZoom,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(modalMap);
+
+      modalMap.on('click', function (e) {
+        setModalPoint(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    if (modalMarker) {
+      modalMap.removeLayer(modalMarker);
+      modalMarker = null;
+    }
+
+    var existing = state[target].latlng;
+    if (existing) {
+      modalMap.setView([existing.lat, existing.lng], 16);
+      modalMarker = L.marker([existing.lat, existing.lng], { icon: pinIcon }).addTo(modalMap);
+      modalLatLng = existing;
+      mapModalValidate.disabled = false;
+      mapModalHint.textContent = 'Point sélectionné.';
+    } else {
+      modalMap.setView(CONFIG.defaultCenter, CONFIG.defaultZoom);
+    }
+
+    setTimeout(function () { modalMap.invalidateSize(); }, 100);
+  }
+
+  function closeMapModal() {
+    mapModal.classList.remove('is-open');
+    document.body.style.overflow = '';
+  }
+
+  function setModalPoint(lat, lng) {
+    modalLatLng = { lat: lat, lng: lng };
+
+    if (modalMarker) {
+      modalMarker.setLatLng([lat, lng]);
+    } else {
+      modalMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(modalMap);
+    }
+
+    mapModalValidate.disabled = false;
+    mapModalHint.textContent = 'Point placé — ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  }
+
+  function reverseGeocode(lat, lng, callback) {
+    var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2' +
+              '&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1';
+
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.display_name) callback(data.display_name);
+        else callback('Point sur la carte (' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')');
+      })
+      .catch(function () {
+        callback('Point sur la carte (' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')');
+      });
+  }
+
+  function validateMapPoint() {
+    if (!modalLatLng) return;
+    var lat = modalLatLng.lat;
+    var lng = modalLatLng.lng;
+
+    mapModalValidate.disabled = true;
+    mapModalValidate.textContent = '…';
+
+    reverseGeocode(lat, lng, function (address) {
+      state[modalTarget].latlng = { lat: lat, lng: lng };
+      state[modalTarget].address = address;
+
+      var input = modalTarget === 'pickup' ? inputs.pickupAddress : inputs.dropAddress;
+      input.value = address;
+
+      var wrap = input.closest('.field');
+      if (wrap) wrap.classList.remove('has-error');
+
+      mapModalValidate.disabled = false;
+      mapModalValidate.textContent = 'Valider';
+      closeMapModal();
+    });
+  }
+
+  document.querySelectorAll('[data-open-map]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openMapModal(btn.dataset.openMap);
+    });
+  });
+
+  mapModalClose.addEventListener('click', closeMapModal);
+  mapModalCancel.addEventListener('click', closeMapModal);
+  mapModalValidate.addEventListener('click', validateMapPoint);
+
+  mapModal.addEventListener('click', function (e) {
+    if (e.target === mapModal) closeMapModal();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && mapModal.classList.contains('is-open')) closeMapModal();
+  });
+
+  mapLocateBtn.addEventListener('click', function () {
+    if (!navigator.geolocation) {
+      alert("Géolocalisation non disponible.");
+      return;
+    }
+
+    var original = mapLocateBtn.innerHTML;
+    mapLocateBtn.disabled = true;
+    mapLocateBtn.textContent = 'Localisation…';
+
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        setModalPoint(pos.coords.latitude, pos.coords.longitude);
+        modalMap.setView([pos.coords.latitude, pos.coords.longitude], 16);
+        mapLocateBtn.disabled = false;
+        mapLocateBtn.innerHTML = original;
+      },
+      function () {
+        mapLocateBtn.disabled = false;
+        mapLocateBtn.innerHTML = original;
+        alert("Impossible d'obtenir votre position. Placez le point manuellement.");
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+
+  /* =====================================================
+     INIT
+     ===================================================== */
+  function init() {
+    var yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    var notifBtn = document.getElementById('notifBtn');
+    var profileBtn = document.getElementById('profileBtn');
+    if (notifBtn) notifBtn.addEventListener('click', function () { console.log('Notif'); });
+    if (profileBtn) profileBtn.addEventListener('click', function () { console.log('Profil'); });
+
+    goToStep(1);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
